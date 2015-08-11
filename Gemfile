@@ -40,6 +40,7 @@ gem "browser", '~> 0.8.0'
 # Provide access to Gitlab::Git library
 gem "gitlab_git", '~> 7.2.5'
 
+
 # Ruby/Rack Git Smart-HTTP Server Handler
 # GitLab fork with a lot of changes (improved thread-safety, better memory usage etc)
 # For full list of changes see https://github.com/SaitoWu/grack/compare/master...gitlabhq:master
