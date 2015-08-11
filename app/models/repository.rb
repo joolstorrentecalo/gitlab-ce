@@ -409,6 +409,14 @@ class Repository
 
   private
 
+  def user_to_comitter(user)
+    {
+      email: user.email,
+      name: user.name,
+      time: Time.now
+    }
+  end
+
   def cache
     @cache ||= RepositoryCache.new(path_with_namespace)
   end
