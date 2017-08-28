@@ -5,7 +5,7 @@ describe ApplicationSetting do
 
   it { expect(setting).to be_valid }
   it { expect(setting.uuid).to be_present }
-  it { expect(setting).to have_db_column(:implied_ci_config_enabled) }
+  it { expect(setting).to have_db_column(:auto_devops_enabled) }
 
   describe 'validations' do
     let(:http)  { 'http://example.com' }

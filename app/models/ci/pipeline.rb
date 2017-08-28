@@ -429,7 +429,7 @@ module Ci
     private
 
     def implied_ci_yaml_file
-      if current_application_settings.implied_ci_config_enabled?
+      if current_application_settings.auto_devops_enabled?
         Gitlab::Template::GitlabCiYmlTemplate.find('Auto-DevOps').content
       end
     end

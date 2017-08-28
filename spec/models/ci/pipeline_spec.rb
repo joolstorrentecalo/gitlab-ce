@@ -798,7 +798,7 @@ describe Ci::Pipeline, :mailer do
 
       it 'returns the implied configuration when its not found' do
         allow_any_instance_of(ApplicationSetting)
-          .to receive(:implied_ci_config_enabled?) { true }
+          .to receive(:auto_devops_enabled?) { true }
         allow(pipeline.project).to receive(:ci_config_path) { 'custom' }
 
         expect(pipeline.ci_yaml_file).to eq(implied_yml)

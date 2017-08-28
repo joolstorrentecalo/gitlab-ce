@@ -125,11 +125,11 @@ ActiveRecord::Schema.define(version: 20170824162758) do
     t.boolean "prometheus_metrics_enabled", default: false, null: false
     t.boolean "help_page_hide_commercial_content", default: false
     t.string "help_page_support_url"
-    t.integer "performance_bar_allowed_group_id"
     t.boolean "password_authentication_enabled"
+    t.integer "performance_bar_allowed_group_id"
     t.boolean "hashed_storage_enabled", default: false, null: false
     t.boolean "project_export_enabled", default: true, null: false
-    t.boolean "implied_ci_config_enabled", default: false, null: false
+    t.boolean "auto_devops_enabled", default: false, null: false
   end
 
   create_table "audit_events", force: :cascade do |t|
