@@ -1,0 +1,5 @@
+---
+title: Cleanup deployments table using foreign keys and not NULL constraints
+merge_request:
+author:
+type: other

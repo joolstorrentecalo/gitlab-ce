@@ -64,6 +64,8 @@ end
 
 Gitlab::Seeder.quiet do
   Project.all.sample(5).each do |project|
+    next unless project.builds.exists?
+
     project_environments = Gitlab::Seeder::Environments.new(project)
     project_environments.seed!
   end

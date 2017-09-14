@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170905112933) do
+ActiveRecord::Schema.define(version: 20170913133743) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -498,10 +498,10 @@ ActiveRecord::Schema.define(version: 20170905112933) do
     t.boolean "tag", null: false
     t.string "sha", null: false
     t.integer "user_id"
-    t.integer "deployable_id"
-    t.string "deployable_type"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.integer "deployable_id", null: false
+    t.string "deployable_type", null: false
+    t.datetime_with_timezone "created_at", null: false
+    t.datetime_with_timezone "updated_at", null: false
     t.string "on_stop"
   end
 
@@ -1700,7 +1700,9 @@ ActiveRecord::Schema.define(version: 20170905112933) do
   add_foreign_key "ci_variables", "projects", name: "fk_ada5eb64b3", on_delete: :cascade
   add_foreign_key "container_repositories", "projects"
   add_foreign_key "deploy_keys_projects", "projects", name: "fk_58a901ca7e", on_delete: :cascade
+  add_foreign_key "deployments", "environments", name: "fk_009fd21147", on_delete: :cascade
   add_foreign_key "deployments", "projects", name: "fk_b9a3851b82", on_delete: :cascade
+  add_foreign_key "deployments", "users", name: "fk_3054bb5111", on_delete: :nullify
   add_foreign_key "environments", "projects", name: "fk_d1c8c1da6a", on_delete: :cascade
   add_foreign_key "events", "projects", on_delete: :cascade
   add_foreign_key "events", "users", column: "author_id", name: "fk_edfd187b6f", on_delete: :cascade
