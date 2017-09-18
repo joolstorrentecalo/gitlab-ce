@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 describe ArtifactUploader do
-  let(:job) { create(:ci_build) }
+  set(:job) { create(:ci_build) }
   let(:uploader) { described_class.new(job, :artifacts_file) }
   let(:path) { Gitlab.config.artifacts.path }
 
