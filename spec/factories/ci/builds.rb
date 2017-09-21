@@ -119,7 +119,7 @@ FactoryGirl.define do
       finished_at nil
     end
 
-    factory :ci_build_tag do
+    trait :tag do
       tag true
     end
 
@@ -155,14 +155,12 @@ FactoryGirl.define do
     end
 
     trait :artifacts do
-      after(:create) do |build, _|
-        create(:artifact, build: build)
-        create(:artifact_metadata, build: build)
-      end
+      job_archive factory: :ci_job_artifact
+      job_metadata factory: :ci_job_metadata
     end
 
     trait :expired do
-      artifacts_expire_at = 1.minute.ago
+      artifacts_expire_at 1.minute.ago
     end
 
     trait :with_commit do
