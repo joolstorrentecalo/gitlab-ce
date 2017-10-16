@@ -34,7 +34,7 @@ class Repository
   CACHED_METHODS = %i(size commit_count rendered_readme contribution_guide
                       changelog license_blob license_key gitignore koding_yml
                       gitlab_ci_yml branch_names tag_names branch_count
-                      tag_count avatar exists? empty? root_ref has_visible_content?
+                      tag_count avatar empty? root_ref has_visible_content?
                       issue_template_names merge_request_template_names).freeze
 
   # Methods that use cache_method but only memoize the value
@@ -353,23 +353,17 @@ class Repository
     @lookup_cache ||= {}
   end
 
-  def expire_exists_cache
-    expire_method_caches(%i(exists?))
-  end
-
   # expire cache that doesn't depend on repository data (when expiring)
   def expire_content_cache
     expire_tags_cache
     expire_branches_cache
     expire_root_ref_cache
     expire_emptiness_caches
-    expire_exists_cache
     expire_statistics_caches
   end
 
   # Runs code after a repository has been created.
   def after_create
-    expire_exists_cache
     expire_root_ref_cache
     expire_emptiness_caches
 
@@ -378,7 +372,6 @@ class Repository
 
   # Runs code just before a repository is deleted.
   def before_delete
-    expire_exists_cache
     expire_all_method_caches
     expire_branch_cache if exists?
     expire_content_cache
@@ -485,11 +478,13 @@ class Repository
 
   # Gitaly migration: https://gitlab.com/gitlab-org/gitaly/issues/314
   def exists?
-    return false unless full_path
-
-    raw_repository.exists?
+    @exists ||=
+      if full_path
+        raw_repository.exists?
+      else
+        false
+      end
   end
-  cache_method :exists?
 
   delegate :empty?, to: :raw_repository
   cache_method :empty?
