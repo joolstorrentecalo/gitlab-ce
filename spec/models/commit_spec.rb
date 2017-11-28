@@ -207,11 +207,6 @@ eos
     context 'of a merge commit' do
       let(:repository) { project.repository }
 
-      let(:commit_options) do
-        author = repository.user_to_committer(user)
-        { message: 'Test message', committer: author, author: author }
-      end
-
       let(:merge_request) do
         create(:merge_request,
                source_branch: 'video',
@@ -224,7 +219,7 @@ eos
         merge_commit_id = repository.merge(user,
                                            merge_request.diff_head_sha,
                                            merge_request,
-                                           commit_options)
+                                           'Test message')
 
         repository.commit(merge_commit_id)
       end
@@ -356,9 +351,16 @@ eos
       end
 
       it 'gives compound status from latest pipelines if ref is nil' do
-        expect(commit.status(nil)).to eq(Ci::Pipeline.latest_status)
-        expect(commit.status(nil)).to eq('failed')
+        expect(commit.status(nil)).to eq(pipeline_from_fix.status)
       end
+    end
+  end
+
+  describe '#set_status_for_ref' do
+    it 'sets the status for a given reference' do
+      commit.set_status_for_ref('master', 'failed')
+
+      expect(commit.status('master')).to eq('failed')
     end
   end
 

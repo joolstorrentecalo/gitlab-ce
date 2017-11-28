@@ -2,6 +2,7 @@
 
 import timeago from 'timeago.js';
 import dateFormat from 'vendor/date.format';
+import { pluralize } from './text_utility';
 
 import {
   lang,
@@ -55,7 +56,7 @@ window.dateFormat = dateFormat;
       if (!timeagoInstance) {
         const localeRemaining = function(number, index) {
           return [
-            [s__('Timeago|less than a minute ago'), s__('Timeago|a while')],
+            [s__('Timeago|less than a minute ago'), s__('Timeago|in a while')],
             [s__('Timeago|less than a minute ago'), s__('Timeago|%s seconds remaining')],
             [s__('Timeago|about a minute ago'), s__('Timeago|1 minute remaining')],
             [s__('Timeago|%s minutes ago'), s__('Timeago|%s minutes remaining')],
@@ -73,7 +74,7 @@ window.dateFormat = dateFormat;
         };
         locale = function(number, index) {
           return [
-            [s__('Timeago|less than a minute ago'), s__('Timeago|a while')],
+            [s__('Timeago|less than a minute ago'), s__('Timeago|in a while')],
             [s__('Timeago|less than a minute ago'), s__('Timeago|in %s seconds')],
             [s__('Timeago|about a minute ago'), s__('Timeago|in 1 minute')],
             [s__('Timeago|%s minutes ago'), s__('Timeago|in %s minutes')],
@@ -143,9 +144,23 @@ export function timeIntervalInWords(intervalInSeconds) {
   let text = '';
 
   if (minutes >= 1) {
-    text = `${minutes} ${gl.text.pluralize('minute', minutes)} ${seconds} ${gl.text.pluralize('second', seconds)}`;
+    text = `${minutes} ${pluralize('minute', minutes)} ${seconds} ${pluralize('second', seconds)}`;
   } else {
-    text = `${seconds} ${gl.text.pluralize('second', seconds)}`;
+    text = `${seconds} ${pluralize('second', seconds)}`;
   }
   return text;
+}
+
+export function dateInWords(date, abbreviated = false) {
+  if (!date) return date;
+
+  const month = date.getMonth();
+  const year = date.getFullYear();
+
+  const monthNames = [s__('January'), s__('February'), s__('March'), s__('April'), s__('May'), s__('June'), s__('July'), s__('August'), s__('September'), s__('October'), s__('November'), s__('December')];
+  const monthNamesAbbr = [s__('Jan'), s__('Feb'), s__('Mar'), s__('Apr'), s__('May'), s__('Jun'), s__('Jul'), s__('Aug'), s__('Sep'), s__('Oct'), s__('Nov'), s__('Dec')];
+
+  const monthName = abbreviated ? monthNamesAbbr[month] : monthNames[month];
+
+  return `${monthName} ${date.getDate()}, ${year}`;
 }

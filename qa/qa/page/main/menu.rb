@@ -7,11 +7,14 @@ module QA
         end
 
         def go_to_projects
-          within_top_menu { click_link 'Projects' }
+          within_top_menu do
+            click_link 'Projects'
+            click_link 'Your projects'
+          end
         end
 
         def go_to_admin_area
-          within_top_menu { click_link 'Admin area' }
+          within_top_menu { find('.admin-icon').click }
         end
 
         def sign_out

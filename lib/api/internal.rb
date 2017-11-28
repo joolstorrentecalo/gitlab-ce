@@ -19,7 +19,9 @@ module API
         status 200
 
         # Stores some Git-specific env thread-safely
-        Gitlab::Git::Env.set(parse_env)
+        env = parse_env
+        env = fix_git_env_repository_paths(env, repository_path) if project
+        Gitlab::Git::Env.set(env)
 
         actor =
           if params[:key_id]
@@ -31,6 +33,12 @@ module API
         protocol = params[:protocol]
 
         actor.update_last_used_at if actor.is_a?(Key)
+        user =
+          if actor.is_a?(Key)
+            actor.user
+          else
+            actor
+          end
 
         access_checker_klass = wiki? ? Gitlab::GitAccessWiki : Gitlab::GitAccess
         access_checker = access_checker_klass
@@ -47,6 +55,7 @@ module API
         {
           status: true,
           gl_repository: gl_repository,
+          gl_username: user&.username,
           repository_path: repository_path,
           gitaly: gitaly_payload(params[:action])
         }
@@ -136,7 +145,7 @@ module API
 
         codes = nil
 
-        ::Users::UpdateService.new(user).execute! do |user|
+        ::Users::UpdateService.new(current_user, user: user).execute! do |user|
           codes = user.generate_otp_backup_codes!
         end
 

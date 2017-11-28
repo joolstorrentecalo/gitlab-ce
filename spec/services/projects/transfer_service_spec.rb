@@ -42,6 +42,18 @@ describe Projects::TransferService do
         expect(service).to receive(:execute_system_hooks)
       end
     end
+
+    it 'disk path has moved' do
+      old_path = project.repository.disk_path
+      old_full_path = project.repository.full_path
+
+      transfer_project(project, user, group)
+
+      expect(project.repository.disk_path).not_to eq(old_path)
+      expect(project.repository.full_path).not_to eq(old_full_path)
+      expect(project.disk_path).not_to eq(old_path)
+      expect(project.disk_path).to start_with(group.path)
+    end
   end
 
   context 'when transfer fails' do
@@ -121,11 +133,14 @@ describe Projects::TransferService do
   end
 
   context 'namespace which contains orphan repository with same projects path name' do
-    let(:repository_storage_path) { Gitlab.config.repositories.storages['default']['path'] }
+    let(:repository_storage) { 'default' }
+    let(:repository_storage_path) { Gitlab.config.repositories.storages[repository_storage]['path'] }
 
     before do
       group.add_owner(user)
-      gitlab_shell.add_repository(repository_storage_path, "#{group.full_path}/#{project.path}")
+      unless gitlab_shell.add_repository(repository_storage, "#{group.full_path}/#{project.path}")
+        raise 'failed to add repository'
+      end
 
       @result = transfer_project(project, user, group)
     end
@@ -182,6 +197,26 @@ describe Projects::TransferService do
       expect_any_instance_of(Labels::TransferService).to receive(:execute).once.and_call_original
 
       transfer_project(project, user, group)
+    end
+  end
+
+  context 'when hashed storage in use' do
+    let(:hashed_project) { create(:project, :repository, :hashed, namespace: user.namespace) }
+
+    before do
+      group.add_owner(user)
+    end
+
+    it 'does not move the directory' do
+      old_path = hashed_project.repository.disk_path
+      old_full_path = hashed_project.repository.full_path
+
+      transfer_project(hashed_project, user, group)
+      project.reload
+
+      expect(hashed_project.repository.disk_path).to eq(old_path)
+      expect(hashed_project.repository.full_path).to eq(old_full_path)
+      expect(hashed_project.disk_path).to eq(old_path)
     end
   end
 

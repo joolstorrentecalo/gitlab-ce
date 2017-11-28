@@ -3,15 +3,11 @@ module QA
     module Admin
       class Menu < Page::Base
         def go_to_license
-          within_middle_menu { click_link 'License' }
+          click_link 'License'
         end
 
-        private
-
-        def within_middle_menu
-          page.within('.nav-control') do
-            yield
-          end
+        def go_to_settings
+          click_link 'Settings'
         end
       end
     end

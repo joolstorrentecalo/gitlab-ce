@@ -11,6 +11,7 @@ module Ci
 
     has_many :deployments, as: :deployable
     has_one :last_deployment, -> { order('deployments.id DESC') }, as: :deployable, class_name: 'Deployment'
+    has_many :trace_sections, class_name: 'Ci::BuildTraceSection'
 
     # The "environment" field for builds is a String, and is the unexpanded name
     def persisted_environment
@@ -103,6 +104,7 @@ module Ci
       end
 
       before_transition any => [:failed] do |build|
+        next unless build.project
         next if build.retries_max.zero?
 
         if build.retries_count < build.retries_max
@@ -191,6 +193,10 @@ module Ci
       project.build_timeout
     end
 
+    def triggered_by?(current_user)
+      user == current_user
+    end
+
     # A slugified version of the build ref, suitable for inclusion in URLs and
     # domain names. Rules:
     #
@@ -229,12 +235,16 @@ module Ci
       variables
     end
 
+    def features
+      { trace_sections: true }
+    end
+
     def merge_request
       return @merge_request if defined?(@merge_request)
 
       @merge_request ||=
         begin
-          merge_requests = MergeRequest.includes(:merge_request_diff)
+          merge_requests = MergeRequest.includes(:latest_merge_request_diff)
             .where(source_branch: ref,
                    source_project: pipeline.project)
             .reorder(iid: :desc)
@@ -259,6 +269,10 @@ module Ci
     def update_coverage
       coverage = trace.extract_coverage(coverage_regex)
       update_attributes(coverage: coverage) if coverage.present?
+    end
+
+    def parse_trace_sections!
+      ExtractSectionsFromBuildTraceService.new(project, user).execute(self)
     end
 
     def trace
@@ -304,6 +318,7 @@ module Ci
 
     def execute_hooks
       return unless project
+
       build_data = Gitlab::DataBuilder::Build.build(self)
       project.execute_hooks(build_data.dup, :job_hooks)
       project.execute_services(build_data.dup, :job_hooks)

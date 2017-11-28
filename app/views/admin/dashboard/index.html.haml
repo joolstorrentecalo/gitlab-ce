@@ -1,13 +1,12 @@
 - @no_container = true
 - breadcrumb_title "Dashboard"
-= render "admin/dashboard/head"
 
 %div{ class: container_class }
   .admin-dashboard.prepend-top-default
     .row
       .col-md-4
         .info-well
-          .well-segment.admin-well
+          .well-segment.admin-well.admin-well-statistics
             %h4 Statistics
             %p
               Forks
@@ -43,13 +42,13 @@
                 = number_with_delimiter(User.active.count)
       .col-md-4
         .info-well
-          .well-segment.admin-well
+          .well-segment.admin-well.admin-well-features
             %h4 Features
             - sign_up = "Sign up"
-            %p{ "aria-label" => "#{sign_up}: status " + (signup_enabled? ? "on" : "off") }
+            %p{ "aria-label" => "#{sign_up}: status " + (allow_signup? ? "on" : "off") }
               = sign_up
               %span.light.pull-right
-                = boolean_to_icon signup_enabled?
+                = boolean_to_icon allow_signup?
             - ldap = "LDAP"
             %p{ "aria-label" => "#{ldap}: status " + (Gitlab.config.ldap.enabled ? "on" : "off") }
               = ldap
@@ -111,6 +110,10 @@
               GitLab API
               %span.pull-right
                 = API::API::version
+            %p
+              Gitaly
+              %span.pull-right
+                = Gitlab::GitalyClient.expected_server_version
             - if Gitlab.config.pages.enabled
               %p
                 GitLab Pages

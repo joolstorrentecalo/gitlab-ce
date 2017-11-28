@@ -14,7 +14,7 @@ export default {
     statusObj() {
       return {
         group: this.status,
-        icon: `icon_status_${this.status}`,
+        icon: `status_${this.status}`,
       };
     },
   },
@@ -27,7 +27,7 @@ export default {
       <button
         v-if="showDisabledButton"
         type="button"
-        class="btn btn-success btn-small"
+        class="js-disabled-merge-button btn btn-success btn-sm"
         disabled="true">
         Merge
       </button>

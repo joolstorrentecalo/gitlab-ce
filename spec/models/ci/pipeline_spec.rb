@@ -26,6 +26,7 @@ describe Ci::Pipeline, :mailer do
   it { is_expected.to respond_to :git_author_name }
   it { is_expected.to respond_to :git_author_email }
   it { is_expected.to respond_to :short_sha }
+  it { is_expected.to delegate_method(:full_path).to(:project).with_prefix }
 
   describe '#source' do
     context 'when creating new pipeline' do
@@ -237,12 +238,20 @@ describe Ci::Pipeline, :mailer do
 
     describe '#stage_seeds' do
       let(:pipeline) do
-        create(:ci_pipeline, config: { rspec: { script: 'rake' } })
+        build(:ci_pipeline, config: { rspec: { script: 'rake' } })
       end
 
       it 'returns preseeded stage seeds object' do
         expect(pipeline.stage_seeds).to all(be_a Gitlab::Ci::Stage::Seed)
         expect(pipeline.stage_seeds.count).to eq 1
+      end
+    end
+
+    describe '#seeds_size' do
+      let(:pipeline) { build(:ci_pipeline_with_one_job) }
+
+      it 'returns number of jobs in stage seeds' do
+        expect(pipeline.seeds_size).to eq 1
       end
     end
 
@@ -616,38 +625,29 @@ describe Ci::Pipeline, :mailer do
 
   shared_context 'with some outdated pipelines' do
     before do
-      create_pipeline(:canceled, 'ref', 'A')
-      create_pipeline(:success, 'ref', 'A')
-      create_pipeline(:failed, 'ref', 'B')
-      create_pipeline(:skipped, 'feature', 'C')
+      create_pipeline(:canceled, 'ref', 'A', project)
+      create_pipeline(:success, 'ref', 'A', project)
+      create_pipeline(:failed, 'ref', 'B', project)
+      create_pipeline(:skipped, 'feature', 'C', project)
     end
 
-    def create_pipeline(status, ref, sha)
-      create(:ci_empty_pipeline, status: status, ref: ref, sha: sha)
+    def create_pipeline(status, ref, sha, project)
+      create(
+        :ci_empty_pipeline,
+        status: status,
+        ref: ref,
+        sha: sha,
+        project: project
+      )
     end
   end
 
-  describe '.latest' do
+  describe '.newest_first' do
     include_context 'with some outdated pipelines'
 
-    context 'when no ref is specified' do
-      let(:pipelines) { described_class.latest.all }
-
-      it 'returns the latest pipeline for the same ref and different sha' do
-        expect(pipelines.map(&:sha)).to contain_exactly('A', 'B', 'C')
-        expect(pipelines.map(&:status))
-          .to contain_exactly('success', 'failed', 'skipped')
-      end
-    end
-
-    context 'when ref is specified' do
-      let(:pipelines) { described_class.latest('ref').all }
-
-      it 'returns the latest pipeline for ref and different sha' do
-        expect(pipelines.map(&:sha)).to contain_exactly('A', 'B')
-        expect(pipelines.map(&:status))
-          .to contain_exactly('success', 'failed')
-      end
+    it 'returns the pipelines from new to old' do
+      expect(described_class.newest_first.pluck(:status))
+        .to eq(%w[skipped failed success canceled])
     end
   end
 
@@ -655,20 +655,14 @@ describe Ci::Pipeline, :mailer do
     include_context 'with some outdated pipelines'
 
     context 'when no ref is specified' do
-      let(:latest_status) { described_class.latest_status }
-
-      it 'returns the latest status for the same ref and different sha' do
-        expect(latest_status).to eq(described_class.latest.status)
-        expect(latest_status).to eq('failed')
+      it 'returns the status of the latest pipeline' do
+        expect(described_class.latest_status).to eq('skipped')
       end
     end
 
     context 'when ref is specified' do
-      let(:latest_status) { described_class.latest_status('ref') }
-
-      it 'returns the latest status for ref and different sha' do
-        expect(latest_status).to eq(described_class.latest_status('ref'))
-        expect(latest_status).to eq('failed')
+      it 'returns the status of the latest pipeline for the given ref' do
+        expect(described_class.latest_status('ref')).to eq('failed')
       end
     end
   end
@@ -677,7 +671,7 @@ describe Ci::Pipeline, :mailer do
     include_context 'with some outdated pipelines'
 
     let!(:latest_successful_pipeline) do
-      create_pipeline(:success, 'ref', 'D')
+      create_pipeline(:success, 'ref', 'D', project)
     end
 
     it 'returns the latest successful pipeline' do
@@ -689,13 +683,74 @@ describe Ci::Pipeline, :mailer do
   describe '.latest_successful_for_refs' do
     include_context 'with some outdated pipelines'
 
-    let!(:latest_successful_pipeline1) { create_pipeline(:success, 'ref1', 'D') }
-    let!(:latest_successful_pipeline2) { create_pipeline(:success, 'ref2', 'D') }
+    let!(:latest_successful_pipeline1) do
+      create_pipeline(:success, 'ref1', 'D', project)
+    end
+
+    let!(:latest_successful_pipeline2) do
+      create_pipeline(:success, 'ref2', 'D', project)
+    end
 
     it 'returns the latest successful pipeline for both refs' do
       refs = %w(ref1 ref2 ref3)
 
       expect(described_class.latest_successful_for_refs(refs)).to eq({ 'ref1' => latest_successful_pipeline1, 'ref2' => latest_successful_pipeline2 })
+    end
+  end
+
+  describe '.latest_status_per_commit' do
+    let(:project) { create(:project) }
+
+    before do
+      pairs = [
+        %w[success ref1 123],
+        %w[manual master 123],
+        %w[failed ref 456]
+      ]
+
+      pairs.each do |(status, ref, sha)|
+        create(
+          :ci_empty_pipeline,
+          status: status,
+          ref: ref,
+          sha: sha,
+          project: project
+        )
+      end
+    end
+
+    context 'without a ref' do
+      it 'returns a Hash containing the latest status per commit for all refs' do
+        expect(described_class.latest_status_per_commit(%w[123 456]))
+          .to eq({ '123' => 'manual', '456' => 'failed' })
+      end
+
+      it 'only includes the status of the given commit SHAs' do
+        expect(described_class.latest_status_per_commit(%w[123]))
+          .to eq({ '123' => 'manual' })
+      end
+
+      context 'when there are two pipelines for a ref and SHA' do
+        it 'returns the status of the latest pipeline' do
+          create(
+            :ci_empty_pipeline,
+            status: 'failed',
+            ref: 'master',
+            sha: '123',
+            project: project
+          )
+
+          expect(described_class.latest_status_per_commit(%w[123]))
+            .to eq({ '123' => 'failed' })
+        end
+      end
+    end
+
+    context 'with a ref' do
+      it 'only includes the pipelines for the given ref' do
+        expect(described_class.latest_status_per_commit(%w[123 456], 'master'))
+          .to eq({ '123' => 'manual' })
+      end
     end
   end
 
@@ -1437,6 +1492,30 @@ describe Ci::Pipeline, :mailer do
       end
 
       it_behaves_like 'not sending any notification'
+    end
+  end
+
+  describe '#latest_builds_with_artifacts' do
+    let!(:pipeline) { create(:ci_pipeline, :success) }
+
+    let!(:build) do
+      create(:ci_build, :success, :artifacts, pipeline: pipeline)
+    end
+
+    it 'returns an Array' do
+      expect(pipeline.latest_builds_with_artifacts).to be_an_instance_of(Array)
+    end
+
+    it 'returns the latest builds' do
+      expect(pipeline.latest_builds_with_artifacts).to eq([build])
+    end
+
+    it 'memoizes the returned relation' do
+      query_count = ActiveRecord::QueryRecorder
+        .new { 2.times { pipeline.latest_builds_with_artifacts.to_a } }
+        .count
+
+      expect(query_count).to eq(1)
     end
   end
 end

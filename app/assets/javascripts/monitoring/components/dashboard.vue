@@ -1,12 +1,13 @@
 <script>
-  /* global Flash */
   import _ from 'underscore';
+  import Flash from '../../flash';
   import MonitoringService from '../services/monitoring_service';
   import GraphGroup from './graph_group.vue';
   import Graph from './graph.vue';
   import EmptyState from './empty_state.vue';
   import MonitoringStore from '../stores/monitoring_store';
   import eventHub from '../event_hub';
+  import { convertPermissionToBoolean } from '../../lib/utils/common_utils';
 
   export default {
 
@@ -17,14 +18,18 @@
       return {
         store,
         state: 'gettingStarted',
-        hasMetrics: gl.utils.convertPermissionToBoolean(metricsData.hasMetrics),
+        hasMetrics: convertPermissionToBoolean(metricsData.hasMetrics),
         documentationPath: metricsData.documentationPath,
         settingsPath: metricsData.settingsPath,
         metricsEndpoint: metricsData.additionalMetrics,
         deploymentEndpoint: metricsData.deploymentEndpoint,
+        emptyGettingStartedSvgPath: metricsData.emptyGettingStartedSvgPath,
+        emptyLoadingSvgPath: metricsData.emptyLoadingSvgPath,
+        emptyUnableToConnectSvgPath: metricsData.emptyUnableToConnectSvgPath,
         showEmptyState: true,
         updateAspectRatio: false,
         updatedAspectRatios: 0,
+        hoverData: {},
         resizeThrottled: {},
       };
     },
@@ -60,6 +65,10 @@
           this.updatedAspectRatios = 0;
         }
       },
+
+      hoverChanged(data) {
+        this.hoverData = data;
+      },
     },
 
     created() {
@@ -68,10 +77,12 @@
         deploymentEndpoint: this.deploymentEndpoint,
       });
       eventHub.$on('toggleAspectRatio', this.toggleAspectRatio);
+      eventHub.$on('hoverChanged', this.hoverChanged);
     },
 
     beforeDestroy() {
       eventHub.$off('toggleAspectRatio', this.toggleAspectRatio);
+      eventHub.$off('hoverChanged', this.hoverChanged);
       window.removeEventListener('resize', this.resizeThrottled, false);
     },
 
@@ -98,6 +109,7 @@
         v-for="(graphData, index) in groupData.metrics"
         :key="index"
         :graph-data="graphData"
+        :hover-data="hoverData"
         :update-aspect-ratio="updateAspectRatio"
         :deployment-data="store.deploymentData"
       />
@@ -108,5 +120,8 @@
     :selected-state="state"
     :documentation-path="documentationPath"
     :settings-path="settingsPath"
+    :empty-getting-started-svg-path="emptyGettingStartedSvgPath"
+    :empty-loading-svg-path="emptyLoadingSvgPath"
+    :empty-unable-to-connect-svg-path="emptyUnableToConnectSvgPath"
   />
 </template>

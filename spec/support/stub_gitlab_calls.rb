@@ -26,11 +26,9 @@ module StubGitlabCalls
   end
 
   def stub_container_registry_config(registry_settings)
+    allow(Gitlab.config.registry).to receive_messages(registry_settings)
     allow(Auth::ContainerRegistryAuthenticationService)
       .to receive(:full_access_token).and_return('token')
-
-    allow(Gitlab.config.registry).to receive_messages(registry_settings)
-    load 'lib/gitlab/auth.rb'
   end
 
   def stub_container_registry_tags(repository: :any, tags:)
@@ -41,11 +39,11 @@ module StubGitlabCalls
       .and_return({ 'tags' => tags })
 
     allow_any_instance_of(ContainerRegistry::Client)
-      .to receive(:repository_manifest).with(repository)
+      .to receive(:repository_manifest).with(repository, anything)
       .and_return(stub_container_registry_tag_manifest)
 
     allow_any_instance_of(ContainerRegistry::Client)
-      .to receive(:blob).with(repository)
+      .to receive(:blob).with(repository, anything, 'application/octet-stream')
       .and_return(stub_container_registry_blob)
   end
 

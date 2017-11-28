@@ -53,6 +53,37 @@ module Gitlab
 
         GitalyClient.call(@storage, :repository_service, :fetch_remote, request)
       end
+
+      def create_repository
+        request = Gitaly::CreateRepositoryRequest.new(repository: @gitaly_repo)
+        GitalyClient.call(@storage, :repository_service, :create_repository, request)
+      end
+
+      def has_local_branches?
+        request = Gitaly::HasLocalBranchesRequest.new(repository: @gitaly_repo)
+        response = GitalyClient.call(@storage, :repository_service, :has_local_branches, request)
+
+        response.value
+      end
+
+      def fetch_source_branch(source_repository, source_branch, local_ref)
+        request = Gitaly::FetchSourceBranchRequest.new(
+          repository: @gitaly_repo,
+          source_repository: source_repository.gitaly_repository,
+          source_branch: source_branch.b,
+          target_ref: local_ref.b
+        )
+
+        response = GitalyClient.call(
+          @storage,
+          :repository_service,
+          :fetch_source_branch,
+          request,
+          remote_storage: source_repository.storage
+        )
+
+        response.result
+      end
     end
   end
 end

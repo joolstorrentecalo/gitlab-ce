@@ -10,8 +10,7 @@ describe 'User visits the profile preferences page' do
   end
 
   it 'shows correct menu item' do
-    expect(find('.sidebar-top-level-items > li.active')).to have_content('Preferences')
-    expect(page).to have_selector('.sidebar-top-level-items > li.active', count: 1)
+    expect(page).to have_active_navigation('Preferences')
   end
 
   describe 'User changes their syntax highlighting theme', :js do
@@ -54,7 +53,7 @@ describe 'User visits the profile preferences page' do
       expect(page).to have_content("You don't have starred projects yet")
       expect(page.current_path).to eq starred_dashboard_projects_path
 
-      find('.shortcuts-activity').trigger('click')
+      find('.shortcuts-activity').click
 
       expect(page).not_to have_content("You don't have starred projects yet")
       expect(page.current_path).to eq dashboard_projects_path

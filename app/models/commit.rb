@@ -25,8 +25,8 @@ class Commit
   DIFF_HARD_LIMIT_FILES = 1000
   DIFF_HARD_LIMIT_LINES = 50000
 
-  # The SHA can be between 7 and 40 hex characters.
-  COMMIT_SHA_PATTERN = '\h{7,40}'.freeze
+  MIN_SHA_LENGTH = 7
+  COMMIT_SHA_PATTERN = /\h{#{MIN_SHA_LENGTH},40}/.freeze
 
   def banzai_render_context(field)
     context = { pipeline: :single_line, project: self.project }
@@ -53,7 +53,7 @@ class Commit
 
     # Truncate sha to 8 characters
     def truncate_sha(sha)
-      sha[0..7]
+      sha[0..MIN_SHA_LENGTH]
     end
 
     def max_diff_options
@@ -80,10 +80,11 @@ class Commit
 
     @raw = raw_commit
     @project = project
+    @statuses = {}
   end
 
   def id
-    @raw.id
+    raw.id
   end
 
   def ==(other)
@@ -100,7 +101,7 @@ class Commit
   def self.reference_pattern
     @reference_pattern ||= %r{
       (?:#{Project.reference_pattern}#{reference_prefix})?
-      (?<commit>\h{7,40})
+      (?<commit>#{COMMIT_SHA_PATTERN})
     }x
   end
 
@@ -108,12 +109,12 @@ class Commit
     @link_reference_pattern ||= super("commit", /(?<commit>#{COMMIT_SHA_PATTERN})/)
   end
 
-  def to_reference(from_project = nil, full: false)
-    commit_reference(from_project, id, full: full)
+  def to_reference(from = nil, full: false)
+    commit_reference(from, id, full: full)
   end
 
-  def reference_link_text(from_project = nil, full: false)
-    commit_reference(from_project, short_id, full: full)
+  def reference_link_text(from = nil, full: false)
+    commit_reference(from, short_id, full: full)
   end
 
   def diff_line_count
@@ -216,9 +217,8 @@ class Commit
     @raw.respond_to?(method, include_private) || super
   end
 
-  # Truncate sha to 8 characters
   def short_id
-    @raw.short_id(7)
+    @raw.short_id(MIN_SHA_LENGTH)
   end
 
   def diff_refs
@@ -237,11 +237,13 @@ class Commit
   end
 
   def status(ref = nil)
-    @statuses ||= {}
-
     return @statuses[ref] if @statuses.key?(ref)
 
-    @statuses[ref] = pipelines.latest_status(ref)
+    @statuses[ref] = project.pipelines.latest_status_per_commit(id, ref)[id]
+  end
+
+  def set_status_for_ref(ref, status)
+    @statuses[ref] = status
   end
 
   def signature
@@ -359,7 +361,7 @@ class Commit
     @deltas ||= raw.deltas
   end
 
-  def diffs(diff_options = nil)
+  def diffs(diff_options = {})
     Gitlab::Diff::FileCollection::Commit.new(self, diff_options: diff_options)
   end
 
@@ -379,8 +381,8 @@ class Commit
 
   private
 
-  def commit_reference(from_project, referable_commit_id, full: false)
-    reference = project.to_reference(from_project, full: full)
+  def commit_reference(from, referable_commit_id, full: false)
+    reference = project.to_reference(from, full: full)
 
     if reference.present?
       "#{reference}#{self.class.reference_prefix}#{referable_commit_id}"

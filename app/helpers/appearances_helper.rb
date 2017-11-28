@@ -31,9 +31,10 @@ module AppearancesHelper
     end
   end
 
-  def custom_icon(icon_name, size: 16)
-    # We can't simply do the below, because there are some .erb SVGs.
-    #  File.read(Rails.root.join("app/views/shared/icons/_#{icon_name}.svg")).html_safe
-    render "shared/icons/#{icon_name}.svg", size: size
+  # Skip the 'GitLab' type logo when custom brand logo is set
+  def brand_header_logo_type
+    unless brand_item && brand_item.header_logo?
+      render 'shared/logo_type.svg'
+    end
   end
 end

@@ -1,14 +1,12 @@
-import Vue from 'vue';
-import VueResource from 'vue-resource';
+import axios from '../../lib/utils/axios_utils';
 import statusCodes from '../../lib/utils/http_status';
-
-Vue.use(VueResource);
+import { backOff } from '../../lib/utils/common_utils';
 
 const MAX_REQUESTS = 3;
 
 function backOffRequest(makeRequestCallback) {
   let requestCounter = 0;
-  return gl.utils.backOff((next, stop) => {
+  return backOff((next, stop) => {
     makeRequestCallback().then((resp) => {
       if (resp.status === statusCodes.NO_CONTENT) {
         requestCounter += 1;
@@ -31,8 +29,8 @@ export default class MonitoringService {
   }
 
   getGraphsData() {
-    return backOffRequest(() => Vue.http.get(this.metricsEndpoint))
-      .then(resp => resp.json())
+    return backOffRequest(() => axios.get(this.metricsEndpoint))
+      .then(resp => resp.data)
       .then((response) => {
         if (!response || !response.data) {
           throw new Error('Unexpected metrics data response from prometheus endpoint');
@@ -42,8 +40,8 @@ export default class MonitoringService {
   }
 
   getDeploymentData() {
-    return backOffRequest(() => Vue.http.get(this.deploymentEndpoint))
-      .then(resp => resp.json())
+    return backOffRequest(() => axios.get(this.deploymentEndpoint))
+      .then(resp => resp.data)
       .then((response) => {
         if (!response || !response.deployments) {
           throw new Error('Unexpected deployment data response from prometheus endpoint');
