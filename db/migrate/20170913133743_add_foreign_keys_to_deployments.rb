@@ -37,4 +37,12 @@ class AddForeignKeysToDeployments < ActiveRecord::Migration
       end
     end
   end
+
+  private
+
+  def foreign_key_exists?(table, column)
+    foreign_keys(table).any? do |key|
+      key.options[:column] == column.to_s
+    end
+  end
 end
