@@ -37,6 +37,14 @@ class Commit
   end
 
   class << self
+    def lazy(project, oid)
+      BatchLoader.for(oid).batch do |items, loader|
+        project.repository.list_commits_by_oid(items).each do |commit|
+          loader.call(commit.id, commit) if commit
+        end
+      end
+    end
+
     def decorate(commits, project)
       commits.map do |commit|
         if commit.is_a?(Commit)
@@ -89,7 +97,7 @@ class Commit
   end
 
   def ==(other)
-    (self.class === other) && (raw == other.raw)
+    other.is_a?(self.class) && id == other.id
   end
 
   def self.reference_prefix

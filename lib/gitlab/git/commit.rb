@@ -195,6 +195,17 @@ module Gitlab
           Gitlab::GitalyClient::CommitService.new(repo).find_all_commits(options)
         end
 
+        def find_by_oids(repository, oids)
+          # Gitaly migrate block
+          Gitlab::GitalyClient.migrate(:list_commits_by_oid) do |is_enabled|
+            if is_enabled
+              Gitlab::GitalyClient::CommitService.new(repository).list_commits_by_oid(oids)
+            else
+              oids.map { |oid| find(repository, oid) }
+            end
+          end
+        end
+
         def decorate(repository, commit, ref = nil)
           Gitlab::Git::Commit.new(repository, commit, ref)
         end

@@ -117,6 +117,10 @@ class Repository
     @commit_cache[oid] = find_commit(oid)
   end
 
+  def list_commits_by_oid(oids)
+    Gitlab::Git::Commit.find_by_oids(raw_repository, oids)
+  end
+
   def commits(ref, path: nil, limit: nil, offset: nil, skip_merges: false, after: nil, before: nil)
     options = {
       repo: raw_repository,

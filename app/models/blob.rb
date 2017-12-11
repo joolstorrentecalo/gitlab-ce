@@ -76,6 +76,7 @@ class Blob < SimpleDelegator
     new(blob, project)
   end
 
+  # Caching is done my batch loader
   def self.lazy(project, commit_id, path)
     BatchLoader.for(commit_id: commit_id, path: path).batch do |items, loader|
       project.repository.blobs_at(items.map(&:values)).each do |blob|

@@ -265,6 +265,25 @@ describe Gitlab::Git::Commit, seed_helper: true do
       it_should_behave_like '.where'
     end
 
+    shared_examples '.find_by_oids' do
+      let(:oids) { [SeedRepo::Commit::ID, SeedRepo::FirstCommit::ID, SeedRepo::LastCommit::ID] }
+
+      it 'finds all valid oids' do
+        commits = described_class.find_by_oids(repository, oids)
+
+        expect(commits).to all(be_a(described_class))
+        expect(commits.size).to eq(oids.size)
+      end
+    end
+
+    describe '.find_by_oids with gitaly' do
+      it_should_behave_like '.find_by_oids'
+    end
+
+    describe '.find_by_oids with gitaly', :skip_gitaly_mock do
+      it_should_behave_like '.find_by_oids'
+    end
+
     describe '.between' do
       subject do
         commits = described_class.between(repository, SeedRepo::Commit::PARENT_ID, SeedRepo::Commit::ID)

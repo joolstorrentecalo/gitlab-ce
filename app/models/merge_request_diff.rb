@@ -235,7 +235,7 @@ class MergeRequestDiff < ActiveRecord::Base
   end
 
   def load_commits
-    commits = merge_request_diff_commits.map { |commit| Commit.from_hash(commit.to_hash, project) }
+    commits = merge_request_diff_commits.map { |commit| Commit.lazy(project, commit.sha) }
 
     CommitCollection
       .new(merge_request.source_project, commits, merge_request.source_branch)

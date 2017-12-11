@@ -183,6 +183,16 @@ module Gitlab
         consume_commits_response(response)
       end
 
+      def list_commits_by_oid(oids)
+        request = Gitaly::ListCommitsByOidRequest.new(
+          repository: @gitaly_repo,
+          oid: oids
+        )
+
+        response = GitalyClient.call(@repository.storage, :commit_service, :list_commits_by_oid, request)
+        consume_commits_response(response)
+      end
+
       def languages(ref = nil)
         request = Gitaly::CommitLanguagesRequest.new(repository: @gitaly_repo, revision: ref || '')
         response = GitalyClient.call(@repository.storage, :commit_service, :commit_languages, request)
