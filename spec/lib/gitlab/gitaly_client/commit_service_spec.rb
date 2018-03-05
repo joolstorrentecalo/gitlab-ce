@@ -156,6 +156,7 @@ describe Gitlab::GitalyClient::CommitService do
 
   describe '#find_commit' do
     let(:revision) { '4b825dc642cb6eb9a060e54bf8d69288fbee4904' }
+
     it 'sends an RPC request' do
       request = Gitaly::FindCommitRequest.new(
         repository: repository_message, revision: revision
@@ -167,31 +168,6 @@ describe Gitlab::GitalyClient::CommitService do
       described_class.new(repository).find_commit(revision)
     end
 
-    describe 'caching', :request_store do
-      let(:commit_dbl) { double(id: 'f01b' * 10) }
-
-      context 'when passed revision is a branch name' do
-        it 'calls Gitaly' do
-          expect_any_instance_of(Gitaly::CommitService::Stub).to receive(:find_commit).twice.and_return(double(commit: commit_dbl))
-
-          commit = nil
-          2.times { commit = described_class.new(repository).find_commit('master') }
-
-          expect(commit).to eq(commit_dbl)
-        end
-      end
-
-      context 'when passed revision is a commit ID' do
-        it 'returns a cached commit' do
-          expect_any_instance_of(Gitaly::CommitService::Stub).to receive(:find_commit).once.and_return(double(commit: commit_dbl))
-
-          commit = nil
-          2.times { commit = described_class.new(repository).find_commit('f01b' * 10) }
-
-          expect(commit).to eq(commit_dbl)
-        end
-      end
-    end
   end
 
   describe '#patch' do
@@ -241,6 +217,44 @@ describe Gitlab::GitalyClient::CommitService do
 
       expect(subject.additions).to eq(11)
       expect(subject.deletions).to eq(15)
+    end
+  end
+
+  describe 'commit caching' do
+    set(:project) { create(:project, :repository) }
+
+    subject { described_class.new(repository) }
+
+    context 'when the request store is activated', :request_store do
+      it 'requests the commit from Gitaly' do
+        expect { subject.find_commit(revision) }.to change { Gitlab::GitalyClient.get_request_count }.by(1)
+      end
+
+      it 'caches based on commit oid' do
+        subject.find_commit(revision)
+
+        expect { subject.find_commit(revision) }.not_to change { Gitlab::GitalyClient.get_request_count }
+      end
+
+      context 'when the commit was requested on another instance' do
+        it 'hits the caches' do
+          commits = subject.find_all_commits(ref: 'master', max_count: 10)
+
+          expect do
+            described_class.new(repository).find_commit(commits.sample.id)
+          end.not_to change { Gitlab::GitalyClient.get_request_count }
+        end
+      end
+
+      context 'when the revision is a branch name' do
+        let(:revision) { 'master' }
+
+        it 'produces cache misses' do
+          subject.find_commit(revision)
+
+          expect { subject.find_commit(revision) }.to change { Gitlab::GitalyClient.get_request_count }.by(1)
+        end
+      end
     end
   end
 end

@@ -16,7 +16,7 @@ describe Commit do
   describe '.lazy' do
     set(:project) { create(:project, :repository) }
 
-    context 'when the commits are found' do
+    context 'when the commits are found', :request_store do
       let(:oids) do
         %w(
           498214de67004b1da3d820901307bed2a68a8ef6

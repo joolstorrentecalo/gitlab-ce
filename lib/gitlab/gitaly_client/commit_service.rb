@@ -183,12 +183,20 @@ module Gitlab
       end
 
       def list_commits_by_oid(oids)
-        request = Gitaly::ListCommitsByOidRequest.new(repository: @gitaly_repo, oid: oids)
+        uncached_oids = oids.reject { |id| cached_commit?(id) }
 
-        response = GitalyClient.call(@repository.storage, :commit_service, :list_commits_by_oid, request, timeout: GitalyClient.medium_timeout)
-        consume_commits_response(response)
-      rescue GRPC::NotFound # If no repository is found, happens mainly during testing
-        []
+        return uncached_oids.map { |oid| find_commit(oid) } if uncached_oids.size < 2
+
+        begin
+          request = Gitaly::ListCommitsByOidRequest.new(repository: @gitaly_repo, oid: uncached_oids)
+
+          response = GitalyClient.call(@repository.storage, :commit_service, :list_commits_by_oid, request, timeout: GitalyClient.medium_timeout)
+          consume_commits_response(response)
+        rescue GRPC::NotFound # If no repository is found, happens mainly during testing
+          nil
+        end
+
+        oids.map { |id| from_commit_cache(id) }.compact
       end
 
       def commits_by_message(query, revision: '', path: '', limit: 1000, offset: 0)
@@ -224,25 +232,19 @@ module Gitlab
       end
 
       def find_commit(revision)
-        if RequestStore.active?
-          # We don't use RequeStstore.fetch(key) { ... } directly because `revision`
-          # can be a branch name, so we can't use it as a key as it could point
-          # to another commit later on (happens a lot in tests).
-          key = {
-            storage: @gitaly_repo.storage_name,
-            relative_path: @gitaly_repo.relative_path,
-            commit_id: revision
-          }
-          return RequestStore[key] if RequestStore.exist?(key)
+        return from_commit_cache(revision) if cached_commit?(revision)
 
-          commit = call_find_commit(revision)
-          return unless commit
+        request = Gitaly::FindCommitRequest.new(
+          repository: @gitaly_repo,
+          revision: encode_binary(revision)
+        )
 
-          key[:commit_id] = commit.id
-          RequestStore[key] = commit
-        else
-          call_find_commit(revision)
-        end
+        response = GitalyClient.call(@repository.storage, :commit_service, :find_commit, request, timeout: GitalyClient.medium_timeout)
+
+        cache_commit(response.commit)
+      rescue GRPC::NotFound => e
+        # Only happens when the Repository is not found. Mostly happens when testing
+        raise Gitlab::Git::Repository::NoRepository.new(e)
       end
 
       def patch(revision)
@@ -270,7 +272,6 @@ module Gitlab
           offset:       options[:offset],
           follow:       options[:follow],
           skip_merges:  options[:skip_merges],
-          all:          !!options[:all],
           disable_walk: true # This option is deprecated. The 'walk' implementation is being removed.
         )
         request.after    = GitalyClient.timestamp(options[:after]) if options[:after]
@@ -369,6 +370,7 @@ module Gitlab
       def consume_commits_response(response)
         response.flat_map do |message|
           message.commits.map do |gitaly_commit|
+            cache_commit(gitaly_commit)
             Gitlab::Git::Commit.new(@repository, gitaly_commit)
           end
         end
@@ -378,15 +380,26 @@ module Gitlab
         Google::Protobuf::RepeatedField.new(:bytes, a.map { |s| encode_binary(s) } )
       end
 
-      def call_find_commit(revision)
-        request = Gitaly::FindCommitRequest.new(
-          repository: @gitaly_repo,
-          revision: encode_binary(revision)
-        )
+      def cached_commit?(commit_id)
+        RequestStore.active? && RequestStore.exist?(cache_key(commit_id))
+      end
 
-        response = GitalyClient.call(@repository.storage, :commit_service, :find_commit, request, timeout: GitalyClient.medium_timeout)
+      def cache_commit(commit)
+        return commit unless RequestStore.active? && commit
 
-        response.commit
+        RequestStore[cache_key(commit.id)] = commit
+      end
+
+      def from_commit_cache(commit_id)
+        RequestStore[cache_key(commit_id)]
+      end
+
+      def cache_key(commit_id)
+        {
+          storage: @gitaly_repo.storage_name,
+          relative_path: @gitaly_repo.relative_path,
+          commit_id: commit_id
+        }
       end
     end
   end

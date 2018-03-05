@@ -233,7 +233,15 @@ module Gitlab
         def batch_by_oid(repo, oids)
           repo.gitaly_migrate(:list_commits_by_oid) do |is_enabled|
             if is_enabled
-              repo.gitaly_commit_client.list_commits_by_oid(oids)
+              begin
+                repo.gitaly_commit_client.list_commits_by_oid(oids).map do |commit|
+                  next unless commit
+
+                  Gitlab::Git::Commit.decorate(repo, commit)
+                end
+              rescue Gitlab::Git::Repository::NoRepository
+                []
+              end
             else
               oids.map { |oid| find(repo, oid) }.compact
             end

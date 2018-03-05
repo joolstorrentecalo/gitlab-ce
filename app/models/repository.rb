@@ -115,7 +115,7 @@ class Repository
   def commits_by(oids:)
     return [] unless oids.present?
 
-    commits = Gitlab::Git::Commit.batch_by_oid(raw_repository, oids)
+    commits = Gitlab::Git::Commit.batch_by_oid(raw_repository, oids).compact
 
     if commits.present?
       Commit.decorate(commits, @project)
