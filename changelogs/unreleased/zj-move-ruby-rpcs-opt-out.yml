@@ -1,0 +1,6 @@
+---
+title: Move ListCommitsByOid, WikiPageVersions, and WikiWritePage Gitaly endpoints
+  to OPT OUT
+merge_request:
+author:
+type: performance
