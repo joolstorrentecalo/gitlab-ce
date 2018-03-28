@@ -90,7 +90,8 @@ module Gitlab
       #  :per_page - The number of items per page.
       #  :limit    - Total number of items to return.
       def page_versions(page_path, options = {})
-        @repository.gitaly_migrate(:wiki_page_versions) do |is_enabled|
+        @repository.gitaly_migrate(:wiki_page_versions,
+                                   status: Gitlab::GitalyClient::MigrationStatus::OPT_OUT) do |is_enabled|
           if is_enabled
             versions = gitaly_wiki_client.page_versions(page_path, options)
 
