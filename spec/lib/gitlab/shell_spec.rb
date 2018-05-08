@@ -404,35 +404,15 @@ describe Gitlab::Shell do
 
     describe '#create_repository' do
       let(:repository_storage) { 'default' }
-      let(:repository_storage_path) do
-        Gitlab::GitalyClient::StorageSettings.allow_disk_access do
-          Gitlab.config.repositories.storages[repository_storage].legacy_disk_path
-        end
-      end
       let(:repo_name) { 'project/path' }
-      let(:created_path) { File.join(repository_storage_path, repo_name + '.git') }
 
       after do
-        FileUtils.rm_rf(created_path)
+        gitlab_shell.rm_directory(repository_storage, "#{repo_name}.git")
       end
 
       it 'creates a repository' do
         expect(gitlab_shell.create_repository(repository_storage, repo_name)).to be_truthy
-
-        expect(File.stat(created_path).mode & 0o777).to eq(0o770)
-
-        hooks_path = File.join(created_path, 'hooks')
-        expect(File.lstat(hooks_path)).to be_symlink
-        expect(File.realpath(hooks_path)).to eq(gitlab_shell_hooks_path)
-      end
-
-      it 'returns false when the command fails' do
-        FileUtils.mkdir_p(File.dirname(created_path))
-        # This file will block the creation of the repo's .git directory. That
-        # should cause #create_repository to fail.
-        FileUtils.touch(created_path)
-
-        expect(gitlab_shell.create_repository(repository_storage, repo_name)).to be_falsy
+        expect(gitlab_shell.exists?(repository_storage, "#{repo_name}.git")).to be_truthy
       end
     end
 

@@ -97,7 +97,7 @@ module Gitlab
         raise Error.new("don't use disk paths with import_repository: #{url.inspect}")
       end
 
-      relative_path = "#{name}.git"
+      cmd = GitalyGitlabProjects.new(storage, relative_path)
       cmd = GitalyGitlabProjects.new(storage, relative_path)
 
       success = cmd.import_project(url, git_timeout)
@@ -117,8 +117,8 @@ module Gitlab
     # Ex.
     #   fetch_remote(my_repo, "upstream")
     #
-    def fetch_remote(repository, remote, ssh_auth: nil, forced: false, no_tags: false, prune: true)
       wrapped_gitaly_errors do
+        repository.gitaly_repository_client.fetch_remote(remote, ssh_auth: ssh_auth, forced: forced, no_tags: no_tags, timeout: git_timeout, prune: prune)
         repository.gitaly_repository_client.fetch_remote(remote, ssh_auth: ssh_auth, forced: forced, no_tags: no_tags, timeout: git_timeout, prune: prune)
       end
     end
@@ -150,7 +150,7 @@ module Gitlab
     def fork_repository(forked_from_storage, forked_from_disk_path, forked_to_storage, forked_to_disk_path)
       forked_from_relative_path = "#{forked_from_disk_path}.git"
       fork_args = [forked_to_storage, "#{forked_to_disk_path}.git"]
-
+      GitalyGitlabProjects.new(forked_from_storage, forked_from_relative_path).fork_repository(*fork_args)
       GitalyGitlabProjects.new(forked_from_storage, forked_from_relative_path).fork_repository(*fork_args)
     end
 
