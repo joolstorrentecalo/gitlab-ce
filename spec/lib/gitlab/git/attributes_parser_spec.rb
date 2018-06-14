@@ -65,14 +65,6 @@ describe Gitlab::Git::AttributesParser, seed_helper: true do
         expect(subject.attributes('test.foo')).to eq({})
       end
     end
-
-    context 'when attributes data is nil' do
-      let(:data) { nil }
-
-      it 'returns an empty Hash' do
-        expect(subject.attributes('test.foo')).to eq({})
-      end
-    end
   end
 
   describe '#patterns' do

@@ -3,8 +3,8 @@ module Gitlab
     # Class for parsing Git attribute files and extracting the attributes for
     # file patterns.
     class AttributesParser
-      def initialize(attributes_data = "")
-        @data = attributes_data || ""
+      def initialize(attributes_data)
+        @data = attributes_data
       end
 
       # Returns all the Git attributes for the given path.
