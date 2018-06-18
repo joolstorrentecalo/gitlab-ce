@@ -1422,11 +1422,6 @@ module Gitlab
         end
       end
 
-      def shell_blame(sha, path)
-        output, _status = run_git(%W(blame -p #{sha} -- #{path}))
-        output
-      end
-
       def last_commit_for_path(sha, path)
         gitaly_migrate(:last_commit_for_path) do |is_enabled|
           if is_enabled
