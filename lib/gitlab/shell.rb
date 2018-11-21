@@ -333,12 +333,6 @@ module Gitlab
       File.expand_path("~#{Gitlab.config.gitlab_shell.ssh_user}")
     end
 
-    def full_path(storage, dir_name)
-      raise ArgumentError.new("Directory name can't be blank") if dir_name.blank?
-
-      File.join(Gitlab.config.repositories.storages[storage].legacy_disk_path, dir_name)
-    end
-
     def gitlab_shell_projects_path
       File.join(gitlab_shell_path, 'bin', 'gitlab-projects')
     end
