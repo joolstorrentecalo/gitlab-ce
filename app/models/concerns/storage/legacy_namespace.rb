@@ -54,6 +54,10 @@ module Storage
     private
 
     def move_repositories
+      if full_path_was == full_path
+        raise Gitlab::UpdatePathError.new('namespace directory cannot be moved')
+      end
+
       # Move the namespace directory in all storages used by member projects
       repository_storages.each do |repository_storage|
         # Ensure old directory exists before moving it

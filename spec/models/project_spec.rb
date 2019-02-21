@@ -3503,8 +3503,7 @@ describe Project do
     describe '#ensure_storage_path_exists' do
       it 'delegates to gitlab_shell to ensure namespace is created' do
         allow(project).to receive(:gitlab_shell).and_return(gitlab_shell)
-
-        expect(gitlab_shell).to receive(:add_namespace).with(project.repository_storage, hashed_prefix)
+        expect(gitlab_shell).not_to receive(:add_namespace).with(project.repository_storage, hashed_prefix)
 
         project.ensure_storage_path_exists
       end

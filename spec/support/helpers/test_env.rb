@@ -253,7 +253,7 @@ module TestEnv
   def copy_repo(project, bare_repo:, refs:)
     target_repo_path = File.expand_path(repos_path + "/#{project.disk_path}.git")
 
-    FileUtils.mkdir_p(target_repo_path)
+    Gitlab::Shell.new.add_namespace(project.repository_storage, "#{project.disk_path}.git")
     FileUtils.cp_r("#{File.expand_path(bare_repo)}/.", target_repo_path)
     FileUtils.chmod_R 0755, target_repo_path
     set_repo_refs(target_repo_path, refs)

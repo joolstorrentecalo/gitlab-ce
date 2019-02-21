@@ -1,0 +1,5 @@
+---
+title: Stop ensuring namespace directories for new repos
+merge_request: 25469
+author:
+type: performance

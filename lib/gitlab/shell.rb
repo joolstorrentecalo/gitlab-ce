@@ -261,7 +261,6 @@ module Gitlab
     #   add_namespace("default", "gitlab")
     #
     def add_namespace(storage, name)
-      # https://gitlab.com/gitlab-org/gitlab-ce/issues/58012
       Gitlab::GitalyClient.allow_n_plus_1_calls do
         Gitlab::GitalyClient::NamespaceService.new(storage).add(name)
       end
@@ -285,11 +284,13 @@ module Gitlab
     # Move namespace directory inside repositories storage
     #
     # Ex.
-    #   mv_namespace("/path/to/storage", "gitlab", "gitlabhq")
+    #   mv_namespace("default", "gitlab", "gitlabhq")
     #
     def mv_namespace(storage, old_name, new_name)
+      return true if old_name == new_name
+
       Gitlab::GitalyClient::NamespaceService.new(storage).rename(old_name, new_name)
-    rescue GRPC::InvalidArgument => e
+    rescue GRPC::InvalidArgument
       Gitlab::Sentry.track_acceptable_exception(e, extra: { old_name: old_name, new_name: new_name, storage: storage })
 
       false
