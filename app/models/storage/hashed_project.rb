@@ -28,7 +28,6 @@ module Storage
     end
 
     def ensure_storage_path_exists
-      # gitlab_shell.add_namespace(repository_storage, base_dir)
       true
     end
 

@@ -71,6 +71,11 @@ describe Backup::Repository do
     end
 
     context 'restoring object pools' do
+      before do
+        # Unmocking the mock on the top level, as this tests depend on mkdir_p to actually be executed
+        allow(FileUtils).to receive(:mkdir_p).and_call_original
+      end
+
       it 'schedules restoring of the pool' do
         pool_repository = create(:pool_repository, :failed)
         pool_repository.delete_object_pool

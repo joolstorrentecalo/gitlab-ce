@@ -113,10 +113,6 @@ module Gitlab
       success
     end
 
-    # Move repository reroutes to mv_directory which is an alias for
-    # mv_namespace. Given the underlying implementation is a move action,
-    # indescriminate of what the folders might be.
-    #
     # storage - project's storage path
     # path - project disk path
     # new_path - new project disk path
@@ -126,7 +122,7 @@ module Gitlab
     def mv_repository(storage, path, new_path)
       return false if path.empty? || new_path.empty?
 
-      !!mv_directory(storage, "#{path}.git", "#{new_path}.git")
+      !!mv_namespace(storage, "#{path}.git", "#{new_path}.git")
     end
 
     # Fork repository to new path
@@ -288,13 +284,15 @@ module Gitlab
     #   mv_namespace("/path/to/storage", "gitlab", "gitlabhq")
     #
     def mv_namespace(storage, old_name, new_name)
+      # Ensure the top level directory exits, until https://gitlab.com/gitlab-org/gitaly/merge_requests/1452
+      # is merged, https://gitlab.com/gitlab-org/gitaly/issues/1891
+      add_namespace(storage, File.dirname(new_name))
       Gitlab::GitalyClient::NamespaceService.new(storage).rename(old_name, new_name)
     rescue GRPC::InvalidArgument => e
       Gitlab::Sentry.track_acceptable_exception(e, extra: { old_name: old_name, new_name: new_name, storage: storage })
 
       false
     end
-    alias_method :mv_directory, :mv_namespace # Note: ShellWorker uses this alias
 
     def url_to_repo(path)
       Gitlab.config.gitlab_shell.ssh_path_prefix + "#{path}.git"
